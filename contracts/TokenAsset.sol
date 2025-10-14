@@ -15,7 +15,7 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 import {ITokenAsset} from "./interfaces/ITokenAsset.sol";
 
 // TODO: Optimize contract for Gas with correct types, do not use uint256 when not needed
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 
 contract TokenAsset is
     ITokenAsset,
@@ -168,10 +168,14 @@ contract TokenAsset is
         FunctionsRequest.Request memory req;
         req.initializeRequestForInlineJavaScript(_fnMintJS);
 
-        string[] memory args = new string[](3);
+        string[] memory args = new string[](4);
         args[0] = id.toString();
         args[1] = quantity.toString();
         args[2] = Strings.toHexString(uint160(msg.sender), 20);
+        // TODO: Use VRF or better source of randomness?
+        args[3] = block.number.toString();
+
+        console.log(args[3]);
 
         req.setArgs(args);
 

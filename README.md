@@ -17,7 +17,7 @@ The only environment setup and tested for is Base Sepolia
 Setup a `.env` file with:
 
 ```
-CONTRACT_FN_MINT_API_URL=https://xxxx.com/api-update?id=${id}&quantity=${quantity}&to=${to}
+CONTRACT_FN_MINT_API_URL=https://xxxx.com/api-update?id=${id}&quantity=${quantity}&to=${to}&hash=${hash}
 ALCHEMY_API_KEY=""
 TESTNET_PRIVATE_KEY=""
 EXPLORER_API_KEY=""

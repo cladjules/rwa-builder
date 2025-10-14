@@ -1,9 +1,10 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 // TODO: Move to another file and use proper DON-hosted secrets
-export const FN_MINT_JS: string = `const id = args[0] + 1;;
+export const FN_MINT_JS: string = `const id = Number(args[0]) + 1;;
   const quantity = args[1];
   const to = args[2];
+  const hash = args[3];
   const apiResponse = await Functions.makeHttpRequest({
     url: \`${process.env.CONTRACT_FN_MINT_API_URL}\`
   }); 
