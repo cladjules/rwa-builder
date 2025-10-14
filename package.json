@@ -1,0 +1,35 @@
+{
+  "name": "rwa-builder",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx hardhat test",
+    "deploy:baseSepolia": "npx hardhat ignition deploy ignition/modules/TokenAsset.ts --network baseSepolia --verify --reset"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cladjules/rwa-builder.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/cladjules/rwa-builder/issues"
+  },
+  "homepage": "https://github.com/cladjules/rwa-builder#readme",
+  "devDependencies": {
+    "@chainlink/contracts": "^1.5.0",
+    "@chainlink/functions-toolkit": "^0.3.2",
+    "@nomicfoundation/hardhat-ignition": "^3.0.3",
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.0",
+    "@nomicfoundation/hardhat-verify": "^3.0.3",
+    "@openzeppelin/contracts": "^5.4.0",
+    "@types/node": "^22.18.10",
+    "dotenv": "^17.2.3",
+    "forge-std": "github:foundry-rs/forge-std#v1.9.4",
+    "hardhat": "^3.0.7",
+    "typescript": "~5.8.0",
+    "viem": "^2.38.1"
+  },
+  "type": "module"
+}
