@@ -1,6 +1,6 @@
 # rwa-builder
 
-This project is a RWA demo project using ChainLink Functions and Data Feeds (Oracle)
+This project is a POC of building RWA contracts using ChainLink Functions and Data Feeds (Oracle)
 
 The smart contracts are not optimized for gas or audited. Use at your own risk.
 
@@ -27,6 +27,6 @@ FN_SUB_ID=xx
 You will need to setup a chainlink function on https://functions.chain.link/base-sepolia
 and get your own subscriptionId to set the env `FN_SUB_ID`
 
-## Deploy contracts
+## Deploy contracts
 
 You can call `deploy:baseSepolia` in order to deploy on Base Sepolia
