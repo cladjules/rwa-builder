@@ -7,7 +7,7 @@ It highlights how to fetch an on-chain price feed (ETH/USD in that case), allow 
 And lets you call an off-chain API to purchase the asset and update a database so it can be updated on your application
 and the balance between ERC-1155 and the database is always synced.
 
-## Notes
+## Notes
 
 The smart contracts are not optimized for gas or audited. Use at your own risk.
 
