@@ -18,7 +18,8 @@ contract TokenAssetTest is Test {
             'return Functions.encodeString("ok");',
             address(mockRouter),
             "0x",
-            0
+            0,
+            "0x123"
         );
     }
 

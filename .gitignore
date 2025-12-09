@@ -142,3 +142,7 @@ vite.config.ts.timestamp-*
 artifacts
 cache
 ignition/deployments
+
+.secrets-*
+
+.DS_Store

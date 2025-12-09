@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "npx hardhat test",
-    "deploy:baseSepolia": "npx hardhat ignition deploy ignition/modules/TokenAsset.ts --network baseSepolia --verify --reset"
+    "create-secrets": "npx hardhat run scripts/create-secrets.ts",
+    "deploy:baseSepolia": "npx hardhat ignition deploy ignition/modules/TokenAsset.ts --network baseSepolia --verify --reset",
+    "upload-secrets:baseSepolia": "npx hardhat run scripts/upload-secrets.ts --network baseSepolia"
   },
   "repository": {
     "type": "git",

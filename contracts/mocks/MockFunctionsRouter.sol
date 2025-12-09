@@ -12,11 +12,11 @@ contract MockFunctionsRouter is IFunctionsRouter {
     address private client;
 
     function sendRequest(
-        uint64 subscriptionId,
-        bytes calldata data,
-        uint16 dataVersion,
-        uint32 callbackGasLimit,
-        bytes32 donId
+        uint64 /* subscriptionId */,
+        bytes calldata /* data */,
+        uint16 /* dataVersion */,
+        uint32 /* callbackGasLimit */,
+        bytes32 /* donId */
     ) external returns (bytes32) {
         client = msg.sender;
         return "32";
@@ -29,23 +29,23 @@ contract MockFunctionsRouter is IFunctionsRouter {
     function getAdminFee() external view override returns (uint72 adminFee) {}
 
     function sendRequestToProposed(
-        uint64 subscriptionId,
-        bytes calldata data,
-        uint16 dataVersion,
-        uint32 callbackGasLimit,
-        bytes32 donId
-    ) external override returns (bytes32) {
+        uint64 /* subscriptionId */,
+        bytes calldata /* data */,
+        uint16 /* dataVersion */,
+        uint32 /* callbackGasLimit */,
+        bytes32 /* donId */
+    ) external pure override returns (bytes32) {
         return "32";
     }
 
     function fulfill(
-        bytes memory response,
-        bytes memory err,
-        uint96 juelsPerGas,
-        uint96 costWithoutFulfillment,
-        address transmitter,
-        FunctionsResponse.Commitment memory commitment
-    ) external override returns (FunctionsResponse.FulfillResult, uint96) {
+        bytes memory /* response */,
+        bytes memory /* err */,
+        uint96 /* juelsPerGas */,
+        uint96 /* costWithoutFulfillment */,
+        address /* transmitter */,
+        FunctionsResponse.Commitment memory /* commitment */
+    ) external pure override returns (FunctionsResponse.FulfillResult, uint96) {
         return (FunctionsResponse.FulfillResult.FULFILLED, 0);
     }
 

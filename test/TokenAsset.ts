@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { network } from "hardhat";
-import { FN_MINT_JS } from "../ignition/modules/TokenAsset.js";
+import { FN_UPDATE_JS } from "../ignition/modules/TokenAsset.js";
 
 const DonId =
   "0x66756e2d626173652d7365706f6c69612d310000000000000000000000000000";
@@ -23,10 +23,11 @@ describe("TokenAsset", async function () {
     const tokenAsset = await viem.deployContract("TokenAsset", [
       "ipfs://",
       mockV3Aggregator.address,
-      FN_MINT_JS,
+      FN_UPDATE_JS,
       mockFunctionsRouter.address,
       DonId,
       0n,
+      "0x123",
     ]);
 
     return { tokenAsset, mockFunctionsRouter };
@@ -137,6 +138,8 @@ describe("TokenAsset", async function () {
 
     await tokenAsset.write.withdraw([1n, quantityToWithdraw]);
 
+    await mockFunctionsRouter.write.mockFulfill();
+
     assert.equal(
       await tokenAsset.read.balanceOf([acc1.account.address, 1n]),
       quantityToMint - quantityToWithdraw
@@ -145,7 +148,7 @@ describe("TokenAsset", async function () {
     const events = await publicClient.getContractEvents({
       address: tokenAsset.address,
       abi: tokenAsset.abi,
-      eventName: "Withdrawn",
+      eventName: "WithdrawSuccess",
       fromBlock: deploymentBlockNumber,
       strict: true,
     });

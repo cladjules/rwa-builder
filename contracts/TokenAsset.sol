@@ -15,7 +15,6 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 import {ITokenAsset} from "./interfaces/ITokenAsset.sol";
 
 // TODO: Optimize contract for Gas with correct types, do not use uint256 when not needed
-import "hardhat/console.sol";
 
 contract TokenAsset is
     ITokenAsset,
@@ -27,9 +26,9 @@ contract TokenAsset is
 {
     using FunctionsRequest for FunctionsRequest.Request;
     using Strings for uint256;
+    using Strings for int256;
 
     event Deployed(uint256 indexed id);
-    event Withdrawn(uint256 indexed id, address indexed from, uint256 quantity);
 
     event MintSuccess(
         uint256 indexed id,
@@ -38,16 +37,25 @@ contract TokenAsset is
         string status
     );
 
-    event MintError(
+    event WithdrawSuccess(
+        uint256 indexed id,
+        address indexed from,
+        uint256 quantity,
+        string status
+    );
+
+    event UpdateError(
         bytes32 indexed requestId,
         address indexed to,
         string reason
     );
 
-    struct MintRequest {
+    struct UpdateRequest {
         uint256 id;
         address to;
-        uint256 quantity;
+        // quantity can be negative in case of withdraw
+        int256 quantity;
+        uint256 amountInEth;
     }
 
     uint32 private constant GAS_LIMIT = 300000;
@@ -59,10 +67,12 @@ contract TokenAsset is
     mapping(uint256 => uint256) public availableSupply;
     mapping(uint256 => uint256) public totalSupply;
 
-    mapping(bytes32 => MintRequest) private _mintRequests;
-    string private _fnMintJS;
+    mapping(bytes32 => UpdateRequest) private _updateRequests;
+    string private _fnUpdateJS;
     uint64 private immutable _fnSubscriptionId;
     bytes32 private immutable _fnDonId;
+    bytes private _encryptedSecretsUrls;
+    uint256 private _requestCounter;
 
     // ETH / USD
     AggregatorV3Interface private immutable _dataFeed;
@@ -70,16 +80,18 @@ contract TokenAsset is
     constructor(
         string memory _contractURI,
         address priceFeedAddress,
-        string memory fnMintJS,
+        string memory fnUpdateJS,
         address fnRouterAddress,
         bytes32 fnDonId,
-        uint64 fnSubscriptionId
+        uint64 fnSubscriptionId,
+        bytes memory encryptedSecretsUrls
     ) ERC1155("") Ownable(msg.sender) FunctionsClient(fnRouterAddress) {
         contractURI = _contractURI;
         _dataFeed = AggregatorV3Interface(priceFeedAddress);
-        _fnMintJS = fnMintJS;
+        _fnUpdateJS = fnUpdateJS;
         _fnSubscriptionId = fnSubscriptionId;
         _fnDonId = fnDonId;
+        _encryptedSecretsUrls = encryptedSecretsUrls;
     }
 
     /**
@@ -145,6 +157,40 @@ contract TokenAsset is
         return id;
     }
 
+    function createRequest(
+        uint256 id,
+        int256 quantity,
+        uint256 amountInEth
+    ) internal {
+        FunctionsRequest.Request memory req;
+        req.initializeRequestForInlineJavaScript(_fnUpdateJS);
+        req.addSecretsReference(_encryptedSecretsUrls);
+
+        string[] memory args = new string[](4);
+        args[0] = id.toString();
+        args[1] = quantity.toStringSigned();
+        args[2] = Strings.toHexString(uint160(msg.sender), 20);
+        args[3] = _requestCounter.toString();
+
+        _requestCounter++;
+
+        req.setArgs(args);
+
+        bytes32 requestId = _sendRequest(
+            req.encodeCBOR(),
+            _fnSubscriptionId,
+            GAS_LIMIT,
+            _fnDonId
+        );
+
+        _updateRequests[requestId] = UpdateRequest({
+            id: id,
+            to: msg.sender,
+            quantity: quantity,
+            amountInEth: amountInEth
+        });
+    }
+
     function mint(
         uint256 id,
         uint256 quantity,
@@ -165,61 +211,7 @@ contract TokenAsset is
             "You must send the exact amount"
         );
 
-        FunctionsRequest.Request memory req;
-        req.initializeRequestForInlineJavaScript(_fnMintJS);
-
-        string[] memory args = new string[](4);
-        args[0] = id.toString();
-        args[1] = quantity.toString();
-        args[2] = Strings.toHexString(uint160(msg.sender), 20);
-        // TODO: Use VRF or better source of randomness?
-        args[3] = block.number.toString();
-
-        console.log(args[3]);
-
-        req.setArgs(args);
-
-        bytes32 requestId = _sendRequest(
-            req.encodeCBOR(),
-            _fnSubscriptionId,
-            GAS_LIMIT,
-            _fnDonId
-        );
-
-        _mintRequests[requestId] = MintRequest({
-            id: id,
-            to: msg.sender,
-            quantity: quantity
-        });
-    }
-
-    function _fulfillRequest(
-        bytes32 requestId,
-        bytes memory response,
-        bytes memory err
-    ) internal override {
-        if (err.length > 0) {
-            // TODO: Refund user if error?
-            emit MintError(requestId, address(0), string(err));
-        } else {
-            MintRequest memory mintReq = _mintRequests[requestId];
-            if (mintReq.to == address(0) || mintReq.quantity == 0) {
-                emit MintError(requestId, address(0), "No Mint Request");
-                return;
-            }
-
-            availableSupply[mintReq.id] -= mintReq.quantity;
-            _mint(mintReq.to, mintReq.id, mintReq.quantity, "");
-
-            emit MintSuccess(
-                mintReq.id,
-                mintReq.to,
-                mintReq.quantity,
-                string(response)
-            );
-        }
-
-        delete _mintRequests[requestId];
+        createRequest(id, int256(quantity), quoteInEth * quantity);
     }
 
     function withdraw(
@@ -236,21 +228,70 @@ contract TokenAsset is
             "Sender does not own enough tokens"
         );
 
-        availableSupply[id] += quantity;
-
-        _burn(msg.sender, id, quantity);
-
         // That wouldn't work if the price of ETH has increased since the minting
         // and the user wants to withdraw all his investment
         // But it's ok for a demo / PoC
         (uint256 amountInEth, , ) = getQuote(id);
         amountInEth = amountInEth * quantity;
-        payable(msg.sender).transfer(amountInEth);
 
-        emit Withdrawn(id, msg.sender, quantity);
+        createRequest(id, -int256(quantity), amountInEth);
+    }
 
-        // TODO: Call Chainlink function to notify the withdrawal
-        // And update database off-chain
+    function _fulfillRequest(
+        bytes32 requestId,
+        bytes memory response,
+        bytes memory err
+    ) internal override {
+        UpdateRequest memory updateReq = _updateRequests[requestId];
+        if (updateReq.to == address(0) || updateReq.quantity == 0) {
+            emit UpdateError(requestId, address(0), "No Update Request");
+            return;
+        }
+
+        if (updateReq.quantity > 0) {
+            if (err.length > 0) {
+                // TODO: Refund user if error
+                emit UpdateError(requestId, address(0), string(err));
+            } else {
+                // Minting
+                _mint(
+                    updateReq.to,
+                    updateReq.id,
+                    uint256(updateReq.quantity),
+                    ""
+                );
+
+                availableSupply[updateReq.id] -= uint256(updateReq.quantity);
+
+                emit MintSuccess(
+                    updateReq.id,
+                    updateReq.to,
+                    uint256(updateReq.quantity),
+                    string(response)
+                );
+            }
+        } else {
+            if (err.length > 0) {
+                emit UpdateError(requestId, address(0), string(err));
+            } else {
+                uint256 quantity = uint256(-updateReq.quantity);
+                // Burning
+                _burn(updateReq.to, updateReq.id, quantity);
+
+                payable(updateReq.to).transfer(updateReq.amountInEth);
+
+                availableSupply[updateReq.id] += uint256(quantity);
+
+                emit WithdrawSuccess(
+                    updateReq.id,
+                    updateReq.to,
+                    quantity,
+                    string(response)
+                );
+            }
+        }
+
+        delete _updateRequests[requestId];
     }
 
     function setContractURI(string calldata newContractURI) external onlyOwner {
